@@ -1,4 +1,5 @@
 import math, random, copy, pygame, sys, sympy
+from operator import mod
 
 WHITE   =  (255, 255, 255)
 ORANGE  =  (255, 127, 0  )
@@ -17,12 +18,26 @@ INNER = 0
 OUTER = 1
 
 SPEED = 5
-DISTANCE = 2000
+DISTANCE = 4000
 
 pygame.init()
 pygame.display.set_caption("심화 수학 I")
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 clock = pygame.time.Clock()
+
+def keyboard():
+    mouse = [0, 0, 0]
+    eventKeys = []
+    pressed_keys = pygame.key.get_pressed()
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            sys.exit()
+        if event.type == pygame.KEYDOWN:
+            eventKeys.append(event.key)
+        mouse = list(pygame.mouse.get_pos()) + [False]
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            mouse[2] = True
+    return mouse, eventKeys, pressed_keys
 
 def getDistance(a, b):
     return math.sqrt((a[0] - b[0])**2 + (a[1] - b[1])**2)
@@ -88,11 +103,11 @@ class LineGetter:
 
     def step2(self):
         if self.l > 0:
-            if (self.r1 + self.r2)/self.l != 0:
-                if (self.r1 + self.r2) < self.l:
+            if (self.r1 - self.r2)/self.l != 0:
+                if (self.r1 - self.r2) < self.l:
                     alpha = math.atan((self.r2 + self.r1)/math.sqrt(self.l**2 - self.r1**2 - 2*self.r1*self.r2 - self.r2**2))
                     if self.mod:
-                        alpha = math.atan((self.r2 - self.r1)/math.sqrt(self.l**2 - self.r1**2 + 2*self.r1*self.r2 - self.r2**2))
+                        alpha = math.atan((self.r2 - self.r1)/math.sqrt(abs(self.l**2 - self.r1**2 + 2*self.r1*self.r2 - self.r2**2)))
                     return alpha
     
     def step3(self):
@@ -133,25 +148,49 @@ def getDegree(circle, player, index):
     p = math.atan((y - player.y)/(x - player.x))
     return theta - p, theta + p
 
-circle = Circle(500, 250, 200, color = BLUE)
-player = Circle(0, 100, 100)
+circle = Circle(500, 250, 100, color = BLUE)
+player = Circle(0, 100, 150)
 innerLineGetter = LineGetter(circle, player, 1)
 outerLineGetter = LineGetter(circle, player, OUTER)
 
+nowMod = 0
+mouseHanging = False
+hangingStart = (0,0)
+
 while True:
-    clock.tick(120)
+    #clock.tick(120)
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             sys.exit()
-    pressed = pygame.key.get_pressed()
-    if pressed[pygame.K_UP]:
-        player.y -= SPEED
-    if pressed[pygame.K_DOWN]:
-        player.y += SPEED
-    if pressed[pygame.K_RIGHT]:
-        player.x += SPEED
-    if pressed[pygame.K_LEFT]:
-        player.x -= SPEED
+    mouse, eventKeys, pressed = keyboard()
+    if not mouseHanging and pressed[pygame.K_a]:
+        nowMod = False
+    if not mouseHanging and pressed[pygame.K_s]:
+        nowMod = True
+
+    if pressed[pygame.K_SPACE]:
+        if not mouseHanging:
+            mouseHanging = True
+            hangingStart = pygame.mouse.get_pos()
+            print(pygame.mouse.get_pos())
+            print("!")
+            print(hangingStart)
+        else:
+            p = pygame.mouse.get_pos()
+            if not nowMod:
+                circle = Circle((hangingStart[0] + p[0])/2, (hangingStart[1] + p[1])/2, abs(hangingStart[0]-p[0])/2, color = BLUE)
+            else:
+                player = Circle((hangingStart[0] + p[0])/2, (hangingStart[1] + p[1])/2, abs(hangingStart[0]-p[0])/2, color = RED)
+
+    else:
+        if mouseHanging:
+            p = pygame.mouse.get_pos()
+            print((p[0],p[1]))
+            mouseHanging = False
+            if not nowMod:
+                circle = Circle((hangingStart[0] + p[0])/2, (hangingStart[1] + p[1])/2, abs(hangingStart[0]-p[0])/2, color = BLUE)
+            else:
+                player = Circle((hangingStart[0] + p[0])/2, (hangingStart[1] + p[1])/2, abs(hangingStart[0]-p[0])/2, color = RED)
     screen.fill(WHITE)
     lineList = []
     innerLineGetter.update(circle, player)
